@@ -1,0 +1,42 @@
+function add_catalogue_price_and_acf_data_to_cart_item_name( $product_name, $cart_item, $cart_item_key ) {
+    // Check if we are on the checkout page
+    if ( is_checkout() ) {
+        return $product_name; // Return the product name without any modifications
+    }
+    
+    $product_id = $cart_item['product_id'];
+    
+    // Retrieve the catalogue price
+    $catalogue_price = get_post_meta( $product_id, 'catalogue_price', true );
+    $promotion = get_post_meta($product_id,'promotion', true );
+    // Retrieve the ACF field value 'pi2_count_field'
+    $pi2_count_field_value = get_field( 'pi2_count_field', $product_id );
+
+    // Get the quantity of the product in the cart
+    $quantity = $cart_item['quantity'];
+
+    // Calculate the total coverage based on quantity and 'pi2_count_field' value
+    $total_coverage = $quantity * $pi2_count_field_value;
+
+    if ( ! empty( $catalogue_price ) ) {
+        $product_name .= '<p class="product-catalogue-price">' . sprintf( __( 'Prix:<span style="color:#3c7b04;" > %s/pi<sup>2</sup></span>', 'woocommerce' ), wc_price( $catalogue_price ) ) . '</p>';
+		
+		if (!empty($promotion)) {
+	
+		echo sprintf('<p >Prix: <del>%s/pi<sup>2</sup></del> <strong style="color:red!important;font-size: 1.2rem;">%s/pi<sup>2</sup></strong></p>', $catalogue_price, $promotion);
+
+        // If promotion is not empty, add JavaScript to hide the element 
+        echo '<script>document.addEventListener("DOMContentLoaded", function() { document.querySelector(".product-catalogue-price").style.display = "none"; });</script>';
+			  
+        }
+    }
+    
+    // Append calculated total coverage to the product name <hr style="height:2px;border-width:0; background-color:#63a500;">
+    if ( ! empty( $pi2_count_field_value ) ) {
+        $product_name .= '<p class="product-acf-data">' . sprintf( __( 'Total:<span style="color:#3c7b04;" > %s pi<sup>2</sup> (%s pi<sup>2</sup>/boîte)</span>', 'woocommerce' ), $total_coverage, $pi2_count_field_value ) . '</p>        <p style="font-size: 70%;color: #800000;">Commande minimum de 15 boîtes.</p>';
+		
+    }
+
+    return $product_name;
+}
+add_filter( 'woocommerce_cart_item_name', 'add_catalogue_price_and_acf_data_to_cart_item_name', 10, 3 );
