@@ -1,0 +1,59 @@
+// Adding a custom field on the general tab section of the WooCommerce
+add_action( 'woocommerce_product_options_pricing', 'wc_catalogue_product_field' );
+function wc_catalogue_product_field() {
+    woocommerce_wp_text_input( array( 'id' => 'catalogue_price', 'class' => 'wc_input_price short', 'label' => __( 'Catalogue Price', 'woocommerce' ) . ' (' . get_woocommerce_currency_symbol() . ')' ) );
+}
+
+add_action( 'save_post', 'wc_catalogue_save_product' );
+function wc_catalogue_save_product( $product_id ) {
+    // If this is an auto-save, do nothing; we only save when the update button is clicked
+    if ( defined( 'DOING_AUTOSAVE' ) && DOING_AUTOSAVE )
+        return;
+    if ( isset( $_POST['catalogue_price'] ) ) {
+        if ( is_numeric( $_POST['catalogue_price'] ) )
+            update_post_meta( $product_id, 'catalogue_price', $_POST['catalogue_price'] );
+    } else {
+        delete_post_meta( $product_id, 'catalogue_price' );
+    }
+}
+
+add_action( 'woocommerce_single_product_summary', 'wc_catalogue_show', 5 );
+function wc_catalogue_show() {
+    global $product;
+
+    $catalogue = get_post_meta( $product->get_id(), 'catalogue_price', true );
+ 	$promotion = get_field('promotion', get_the_id());
+    // Check if the product category is not "Fournisseurs associé" or "Planchers Wickham"
+    
+        if ( ! empty( $catalogue ) || $product->is_type( 'variable' ) ) {
+            echo '<div class="woocommerce_msrp">';
+         // Output catalogue price if promotion is empty
+        if (empty($promotion)) {
+            echo '<span class="woocommerce-catalogue-price"><b>' . wc_price($catalogue) . '/pi<sup>2</sup></b></span>';
+           // echo '<script>document.addEventListener("DOMContentLoaded", function() { document.querySelector(".woocommerce-catalogue-price").style.display = "block"; });</script>';
+        }
+
+        // Check if there is a promotion
+        if (!empty($promotion)) {
+            // If there's a promotion, hide the catalogue price and show the promotion
+            $promotion_text = sprintf('<p style="margin-bottom: 0!important;display:flex;flex-wrap: nowrap;align-content: center;justify-content: space-evenly;font-size: 1.2rem;"><del>%s/pi<sup>2</sup></del><span style="color:#B22222;font-weight: bold;font-size:1.3rem;"> %s/pi<sup>2</sup></span></p>', $catalogue, $promotion);
+            echo $promotion_text;
+            echo '<script>document.addEventListener("DOMContentLoaded", function() { document.querySelector(".woocommerce-catalogue-price").style.display = "none"; });</script>';
+        }
+			
+    if ( ! has_term( array( 'planchers-wickham' ), 'product_cat', $product->get_id() ) ) {
+            // Check if product is in stock
+            if ( $product->is_in_stock() ) {
+                echo '<br><span class="woocommerce-in-stock" ><span style="color:#65a300;font-weight: bold;font-size: 1.5em;"> &check;</span> En inventaire</span>';
+            }}
+	if ( has_term( array( 'planchers-wickham' ), 'product_cat', $product->get_id() ) ) {       
+		 echo '<p class="woocommerce-in-stock" style="color:#B22222;font-weight: bold;margin-bottom: 0!important;"> Commande spéciale</p>';
+	}     
+            echo '</div>';
+        }
+    
+}
+
+
+// Optional: To show on archive pages
+add_action( 'woocommerce_after_shop_loop_item_title', 'wc_catalogue_show' );
